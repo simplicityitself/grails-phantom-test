@@ -10,23 +10,23 @@ class PhantomGrailsTestType implements GrailsTestType {
   String relativeSourcePath
   String name
 
-  PhantomGrailsTestType(String name, String sourceDirectory) {
-    this.name = name
-    this.relativeSourcePath = sourceDirectory
-  }
+  def testFiles
 
   @Override
   int prepare(GrailsTestTargetPattern[] testTargetPatterns, File compiledClassesDir, Binding buildBinding) {
-    // generate an HTML suite... ?
+    //TODO, filtering the target patterns
+    def tests = new File(relativeSourcePath).absoluteFile
 
-    //todo, detect the test suites to run. select the server js to use to power phantom.
+    testFiles = tests.listFiles().findAll {
+      true
+    }
 
-    return 20
+    return testFiles.size()
   }
 
   @Override
   GrailsTestTypeResult run(GrailsTestEventPublisher eventPublisher) {
-//    println "RUNNING ...... "
+
     //todo, execute phantom for each test suite we detected above.
     //ensure that we output the XML reports...
     //collect the results into the grails test type result.
@@ -37,7 +37,6 @@ class PhantomGrailsTestType implements GrailsTestType {
     // status events for the IDE
     // XML for junit reports/ TC.
     // number output for the final counts
-
 
     //This gives the interaction with the IDE, via the status events
     eventPublisher.testCaseStart("WibbleMonkey")

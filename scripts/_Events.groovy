@@ -14,8 +14,8 @@ loadPhantomTestTypeClass = {->
 loadPhantomTestTypes = {
   def phantomTestTypeClass = loadPhantomTestTypeClass()
   binding.setVariable("phantomTests", [
-      phantomTestTypeClass.newInstance("mocha", "mocha"),
-      phantomTestTypeClass.newInstance("jasmine", "jasmine")
+      phantomTestTypeClass.newInstance(name:"mocha", relativeSourcePath:"test/mocha"),
+      phantomTestTypeClass.newInstance(name:"jasmine", relativeSourcePath:"test/jasmine")
       ])
 }
 
