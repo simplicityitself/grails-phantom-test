@@ -7,64 +7,72 @@ import org.codehaus.groovy.grails.test.event.GrailsTestEventPublisher
 
 class PhantomGrailsTestType implements GrailsTestType {
 
-  String relativeSourcePath
   String name
 
   def testFiles
 
   @Override
+  String getRelativeSourcePath() {
+    name
+  }
+
+  @Override
   int prepare(GrailsTestTargetPattern[] testTargetPatterns, File compiledClassesDir, Binding buildBinding) {
     //TODO, filtering the target patterns
-    def tests = new File(relativeSourcePath).absoluteFile
+    println "Checking ...."
+    def tests = new File("test", relativeSourcePath).absoluteFile
 
-    testFiles = tests.listFiles().findAll {
-      true
+    testFiles = []
+
+    tests.eachFileRecurse {
+      if (it.name.endsWith(".html")) {
+        testFiles << it
+      }
     }
 
+    println "Found ${testFiles}"
     return testFiles.size()
   }
 
   @Override
   GrailsTestTypeResult run(GrailsTestEventPublisher eventPublisher) {
 
-    //todo, execute phantom for each test suite we detected above.
     //ensure that we output the XML reports...
     //collect the results into the grails test type result.
 //    throw new IllegalStateException("Balls")
+    def passed = 0
+    def failed = 0
 
+    testFiles.each { testFile ->
 
-    //TODO.
-    // status events for the IDE
-    // XML for junit reports/ TC.
-    // number output for the final counts
+      eventPublisher.testCaseStart(testFile.name)
+      eventPublisher.testStart("Tests")
 
-    //This gives the interaction with the IDE, via the status events
-    eventPublisher.testCaseStart("WibbleMonkey")
-    eventPublisher.testStart("Arse")
-    eventPublisher.testFailure("Arse", "Failure of reason", true)
+      //TODO, somehow break up the specs info into individual tests? Maybe use a lower level prodcess control and sniff the test case output as it comes out.
 
-    eventPublisher.testStart("Arse")
-    eventPublisher.testFailure("Arse", "Failure of reason", false)
+      //TODO, detect the js files and have some common runner html instead, maybe a template?
+      println "Executing phaont against $testFile"
+      def outputFile = "target/test-reports/TEST-${testFile.name.replace('-', '').replace('.html', '.xml')}"
+      def ant = new AntBuilder()
+      ant.exec(outputproperty: "cmdOut", errorproperty: "cmdErr", resultproperty: "cmdExit", failonerror: "false", executable: "src/resources/phantom/phantomjs-1.9.1-linux-i686/phantomjs") {
+        arg(line: "src/resources/mocha/mocha_server.js")
+        arg(line: "${testFile.canonicalPath}")
+      }
+      if (ant.project.properties.cmdExit != "0") {
+        failed++
+        eventPublisher.testFailure("Tests", ant.project.properties.cmdErr, false)
+        eventPublisher.testCaseEnd(testFile.name, ant.project.properties.cmdOut, ant.project.properties.cmdErr)
+      } else {
+        passed++
+        eventPublisher.testEnd("Tests")
+        eventPublisher.testCaseEnd(testFile.name)
+      }
+      new File(outputFile).write(ant.project.properties.cmdOut)
+    }
 
-    eventPublisher.testStart("Arse")
-    eventPublisher.testFailure("Arse", "Failure of reason", true)
-
-    eventPublisher.testStart("Arse")
-    eventPublisher.testFailure("Arse", "Failure of reason", false)
-
-    eventPublisher.testStart("Arse")
-    eventPublisher.testFailure("Arse", "Failure of reason", true)
-
-    eventPublisher.testCaseEnd("WibbleMonkey")
-    eventPublisher.testCaseStart("Bum Fluff")
-
-    eventPublisher.testStart("Umph")
-    eventPublisher.testEnd("Umph")
-
-    eventPublisher.testCaseEnd("Bum Fluff")
     return [
-        getPassCount: { 4 },
-        getFailCount: { 16}
+        getPassCount: { passed },
+        getFailCount: { failed }
     ] as GrailsTestTypeResult
   }
 
